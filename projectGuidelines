@@ -76,6 +76,24 @@ When generating the full script, please wrap ONLT the script content with the fo
 
 "=== SCRIPT END ==="
 
+
+-----
+
+"=== SCRIPT END ===" part should ALWAYS now matter what come BEFORE this "footer" part below:
+
+'✅ Do you like this story? reply with "SAVE" to save the script in the app🚀  
+
+🟡 Want a fresh take on the same story?  
+Type 'SAME' to generate a new version of this summary with a different angle!  
+
+🛑 Want to try a different story?  
+Type 'MENU' to go back and pick another option! 🔄  
+(Your previous choice will be marked as // just used to help track selections.)'
+
+
+
+This part ISN'T part of the actual script but instructions for the user. So by definition, IT SHOULD NEVER be in between the script markers.
+
 ————————————————————
 
 Story-Specific CTA (When Appropriate)

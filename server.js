@@ -185,7 +185,6 @@ app.post('/api/validate-code', async (req, res) => {
     }
 });
 
-// New YouTube transcript API using dedicated library
 app.post('/api/youtube-transcript', async (req, res) => {
     const { url, additionalContent } = req.body;
 
@@ -273,8 +272,16 @@ app.post('/api/save-script', async (req, res) => {
     }
 });
 
+// In the /api/chat endpoint, modify the request processing
+// In the /api/chat endpoint, modify the request processing
 app.post('/api/chat', async (req, res) => {
-    const { message, apiKey, chatHistory, isRetry } = req.body;
+    const { 
+        message, 
+        apiKey, 
+        chatHistory, 
+        isRetry, 
+        model = 'claude-3-5-sonnet-20241022'
+    } = req.body;
 
     if (!message) {
         return res.status(400).json({ error: 'Message is required' });
@@ -327,23 +334,42 @@ app.post('/api/chat', async (req, res) => {
         const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
         try {
-            console.log(`Sending request to Claude API${isRetry ? ' (retry)' : ''}`);
+            console.log(`Sending request to Claude API${isRetry ? ' (retry)' : ''}`, {
+                model
+            });
 
-            const response = await axios.post('https://api.anthropic.com/v1/messages', {
-                model: 'claude-3-5-sonnet-20241022',
-                max_tokens: 3000,
+            const requestBody = {
+                model: model,
+                max_tokens: getMaxTokensForModel(model), // Use a helper function
                 temperature: 0.7,
                 system: systemPrompt,
                 messages: messages
-            }, {
-                headers: {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'Content-Type': 'application/json'
-                },
-                signal: controller.signal,
-                timeout: API_TIMEOUT
-            });
+            };
+            
+            // Helper function to determine appropriate token limits
+            function getMaxTokensForModel(model) {
+                if (model.includes('claude-3-7')) {
+                    return 32000; // Appropriate for Claude 3.7 models
+                } else if (model.includes('claude-3-5')) {
+                    return 8000; // Just under the 8192 limit for Claude 3.5 models
+                } else {
+                    // Default fallback
+                    return 4000;
+                }
+            }
+
+            const response = await axios.post('https://api.anthropic.com/v1/messages', 
+                requestBody, 
+                {
+                    headers: {
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    signal: controller.signal,
+                    timeout: API_TIMEOUT
+                }
+            );
 
             clearTimeout(timeoutId);
 

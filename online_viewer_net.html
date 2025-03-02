@@ -95,8 +95,8 @@
     }
 
     .chat-bubble:hover {
-        box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
-        transform: perspective(500px) translateZ(15px);
+            transform: none !important;
+            box-shadow: var(--shadow) !important;
     }
 
     .chat-bubble.user {
@@ -1061,8 +1061,8 @@
     .success-notification {
         position: fixed;
         bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 50% !important;
+        transform: translateX(-50%) !important;
         background: linear-gradient(135deg, #4CAF50, #2E7D32);
         color: white;
         padding: 12px 24px;
@@ -1275,6 +1275,132 @@
     .chat-bubble-wrapper.ai .button-group button {
         margin: 0;
     }
+    
+    /* New styles for emoji buttons */
+    .emoji-options {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .emoji-options:hover {
+        opacity: 1;
+    }
+
+    .emoji-option {
+        background: var(--secondary);
+        border: none;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+    .emoji-option:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .emoji-option:active {
+        transform: scale(0.95);
+    }
+
+    /* Model selection dropdown */
+    .model-select {
+        background: var(--side-bg);
+        color: var(--text);
+        border: 1px solid var(--secondary);
+        border-radius: 8px;
+        padding: 6px 10px;
+        margin-right: 10px;
+        font-size: 14px;
+        outline: none;
+        transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .model-select:focus {
+        border-color: var(--primary);
+        background: var(--secondary);
+    }
+
+    .input-row {
+        display: flex;
+        align-items: center;
+    }
+    
+    .chat-bubble-wrapper.ai {
+        position: relative;
+    }
+    
+    .chat-bubble-wrapper.ai .emoji-options {
+        position: absolute;
+        left: 0px; /* Exactly match the AI bubble's left padding */
+        top: calc(100% + 8px);
+        display: flex;
+        gap: 10px; /* Slightly more space between emoji options */
+        align-items: center;
+        opacity: 1 !important; /* Ensure they never fade out */
+    }
+    
+    .chat-bubble-wrapper.ai .emoji-option {
+        font-size: 16px; /* Slightly larger */
+        padding: 6px 10px; /* More padding */
+        background: var(--secondary);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: none; /* Remove any fade or transform effects */
+    }
+    
+    .chat-bubble-wrapper.ai .emoji-option:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .emoji-options {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+        background: var(--secondary);
+        border-radius: 20px;
+        padding: 6px 10px;
+        align-self: center;
+        max-width: 75%;
+        opacity: 0.7;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    
+    .emoji-options:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+    }
+    
+    .emoji-option {
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .emoji-option:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .emoji-option:active {
+        transform: scale(0.95);
+    }
+
 </style>
 </head>
 <body>
@@ -1332,6 +1458,12 @@
                 </div>
                 <div class="input-row">
                     <textarea id="userInput" placeholder="Type your message..." rows="1" oninput="autoExpand(this)"></textarea>
+                    <div class="model-select-container">
+                        <select id="modelSelect" class="model-select">
+                            <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                            <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet</option>
+                        </select>
+                    </div>
                     <button id="sendStopButton" onclick="toggleSendStop()">➤</button>
                 </div>
             </div>
@@ -1444,11 +1576,78 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
     let abortController = null;
     let currentStory = ''; // To store the story for display in user bubble
     let currentTranscript = ''; // To store the transcript for YT link submissions
-
+    
+    // Function to check if a message is a 1-10 options message
+    function isNumberedOptionsMessage(message) {
+        // Check for the presence of key elements
+        const hasStoryHookEmoji = message.includes('🎭');
+        const hasStoryHookText = message.includes('Story Hook:');
+        const hasNumberedEmojis = 
+            message.includes('1️⃣') && 
+            message.includes('2️⃣') && 
+            message.includes('3️⃣') && 
+            message.includes('4️⃣') && 
+            message.includes('5️⃣') && 
+            message.includes('6️⃣') && 
+            message.includes('7️⃣') && 
+            message.includes('8️⃣') && 
+            message.includes('9️⃣') && 
+            message.includes('🔟');
+    
+        // Return true if all conditions are met
+        return hasStoryHookEmoji && hasStoryHookText && hasNumberedEmojis;
+    }
+    
+    // Function to create emoji buttons for 1-10 options
+    function createEmojiOptions(message) {
+        // Check for the presence of key elements
+        const hasStoryHookEmoji = message.includes('🎭');
+        const hasStoryHookText = message.includes('Story Hook:');
+        const hasNumberedEmojis = 
+            message.includes('1️⃣') && 
+            message.includes('2️⃣') && 
+            message.includes('3️⃣') && 
+            message.includes('4️⃣') && 
+            message.includes('5️⃣') && 
+            message.includes('6️⃣') && 
+            message.includes('7️⃣') && 
+            message.includes('8️⃣') && 
+            message.includes('9️⃣') && 
+            message.includes('🔟');
+    
+        // Return true if all conditions are met
+        if (hasStoryHookEmoji && hasStoryHookText && hasNumberedEmojis) {
+            const emojiOptionContainer = document.createElement('div');
+            emojiOptionContainer.className = 'emoji-options';
+            
+            // Create buttons for 1-10
+            for (let i = 1; i <= 10; i++) {
+                const button = document.createElement('button');
+                button.className = 'emoji-option';
+                button.textContent = i === 10 ? '🔟' : `${i}️⃣`;
+                button.onclick = () => {
+                    const userInput = document.getElementById('userInput');
+                    userInput.value = i.toString();
+                    sendMessage();
+                };
+                emojiOptionContainer.appendChild(button);
+            }
+            
+            return emojiOptionContainer;
+        }
+        
+        return null;
+    }
+    
+    // Modify createAiMessageWrapper to include emoji options
     function createAiMessageWrapper(message) {
+        const aiWrapper = document.createElement("div");
+        aiWrapper.className = "chat-bubble-wrapper ai";
+        
         const aiBubble = document.createElement("div");
         aiBubble.className = "chat-bubble ai";
         aiBubble.textContent = message;
+        aiWrapper.appendChild(aiBubble);
     
         const buttonGroup = document.createElement("div");
         buttonGroup.className = "button-group";
@@ -1474,14 +1673,17 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         copyButton.onclick = () => copyToClipboard(message);
         buttonGroup.appendChild(copyButton);
     
-        const aiWrapper = document.createElement("div");
-        aiWrapper.className = "chat-bubble-wrapper ai";
-        aiWrapper.appendChild(aiBubble);
         aiWrapper.appendChild(buttonGroup);
+    
+        // Add emoji options
+        const emojiOptions = createEmojiOptions(message);
+        if (emojiOptions) {
+            aiWrapper.appendChild(emojiOptions);
+        }
     
         return aiWrapper;
     }
-    
+
     function verifyAccessKey() {
         const accessKey = document.getElementById('accessKey').value.trim();
         const messageElement = document.getElementById('accessKeyMessage');
@@ -2324,32 +2526,32 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         if (isRequestPending) {
             return; // Silently prevent sending
         }
-
+    
         const userInput = document.getElementById("userInput");
         const chatBox = document.getElementById("chatBox");
         const sendButton = document.getElementById("sendStopButton");
         const message = userInput.value.trim();
-
-        if (!message && !window.currentPrompt) return; // Require either a message or a pre-set prompt
+        const modelSelect = document.getElementById('modelSelect');
+    
+        if (!message && !window.currentPrompt) return;
         if (!currentApiKey) return;
-
+    
         isRequestPending = true;
         sendButton.textContent = "■";
         sendButton.classList.add("active");
-
+    
         const currentHistory = chatSessions[currentSessionId] || [];
         let editedBubble = chatBox.querySelector('.chat-bubble.editable');
         let editedIndex = editedBubble ? parseInt(editedBubble.dataset.index, 10) : -1;
-
-        // Determine what to display in the user bubble - FIXED to show full content
+    
         let displayMessage = message;
         let messageToSend = message;
         
         if (!message && window.currentPrompt) {
-            displayMessage = window.currentPrompt; // Show full prompt instead of a placeholder
+            displayMessage = window.currentPrompt;
             messageToSend = window.currentPrompt;
         }
-
+        
         if (editedIndex !== -1) {
             editedBubble.textContent = displayMessage;
             editedBubble.classList.remove('editable');
@@ -2367,21 +2569,21 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
             userBubble.className = "chat-bubble user";
             userBubble.textContent = displayMessage;
             userBubble.dataset.index = currentHistory.length;
-
+    
             const wrapper = document.createElement("div");
             wrapper.className = "chat-bubble-wrapper user";
             wrapper.appendChild(userBubble);
-
+    
             const editButton = document.createElement("button");
             editButton.className = "edit-button";
             editButton.textContent = "✏️";
             editButton.title = "Edit this message";
             editButton.onclick = () => startEditing(userBubble);
             wrapper.appendChild(editButton);
-
+    
             chatBox.appendChild(wrapper);
         }
-
+    
         const thinkingBubble = document.createElement("div");
         thinkingBubble.className = "chat-bubble ai placeholder";
         thinkingBubble.textContent = cookingMessages[Math.floor(Math.random() * cookingMessages.length)];
@@ -2389,58 +2591,63 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         thinkingWrapper.className = "chat-bubble-wrapper ai";
         thinkingWrapper.appendChild(thinkingBubble);
         chatBox.appendChild(thinkingWrapper);
-
+    
         userInput.value = "";
         autoExpand(userInput);
         chatBox.scrollTop = chatBox.scrollHeight;
-
+    
         abortController = new AbortController();
+        
         try {
+            // Prepare request body
+            const requestBody = {
+                message: messageToSend, 
+                apiKey: currentApiKey,
+                chatHistory: currentHistory,
+                model: modelSelect.value
+            };
+    
+            // If editing an existing message, modify history
             if (editedIndex !== -1) {
                 currentHistory[editedIndex] = { role: 'user', content: displayMessage };
                 currentHistory.splice(editedIndex + 1);
             } else {
                 currentHistory.push({ role: 'user', content: displayMessage });
             }
-
+    
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 signal: abortController.signal,
-                body: JSON.stringify({ 
-                    message: messageToSend, 
-                    apiKey: currentApiKey,
-                    chatHistory: currentHistory
-                })
+                body: JSON.stringify(requestBody)
             });
-
+    
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.details || `HTTP error! status: ${response.status}`);
             }
-
+    
             const data = await response.json();
             thinkingWrapper.remove();
-
-            const aiBubble = document.createElement("div");
-            aiBubble.className = "chat-bubble ai";
-            aiBubble.textContent = data.response;
-            
+    
             const aiWrapper = createAiMessageWrapper(data.response);
             chatBox.appendChild(aiWrapper);
-
+    
             currentHistory.push({ role: 'assistant', content: data.response });
             chatSessions[currentSessionId] = currentHistory;
             setChatSessions(chatSessions);
-
+    
             updateChatList();
             chatBox.scrollTop = chatBox.scrollHeight;
-
+    
             // Reset window.currentPrompt after use to prevent reuse
             window.currentPrompt = null;
             currentStory = ''; // Clear stored story
             currentTranscript = ''; // Clear stored transcript
+    
         } catch (error) {
+            console.error('Full error details:', error);
+    
             if (error.name !== 'AbortError') {
                 thinkingWrapper.remove();
                 const errorBubble = document.createElement("div");
@@ -2449,28 +2656,28 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
                 const errorWrapper = document.createElement("div");
                 errorWrapper.className = "chat-bubble-wrapper ai";
                 errorWrapper.appendChild(errorBubble);
-
+    
                 const quoteButton = document.createElement("button");
                 quoteButton.className = "quote-button";
                 quoteButton.textContent = "💬";
                 quoteButton.title = "Quote this response";
                 quoteButton.onclick = () => quoteMessage(errorBubble);
                 errorWrapper.appendChild(quoteButton);
-
+    
                 const retryButton = document.createElement("button");
                 retryButton.className = "retry-button";
                 retryButton.textContent = "🔄";
                 retryButton.title = "Regenerate response";
                 retryButton.onclick = () => retryMessage(errorBubble);
                 errorWrapper.appendChild(retryButton);
-
+    
                 const copyButton = document.createElement("button");
                 copyButton.className = "copy-button";
                 copyButton.textContent = "📋";
                 copyButton.title = "Copy to clipboard";
                 copyButton.onclick = () => copyToClipboard(errorBubble.textContent);
                 errorWrapper.appendChild(copyButton);
-
+    
                 chatBox.appendChild(errorWrapper);
                 chatBox.scrollTop = chatBox.scrollHeight;
                 
@@ -2489,39 +2696,55 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
 
     async function retryMessage(aiBubble) {
         if (isRequestPending) return;
-
+    
         const chatBox = document.getElementById("chatBox");
         const sendButton = document.getElementById("sendStopButton");
+        const modelSelect = document.getElementById('modelSelect');
+        
+        // Find the clicked AI message's wrapper
         const wrapper = aiBubble.parentElement;
         const allWrappers = Array.from(chatBox.querySelectorAll('.chat-bubble-wrapper'));
+        
+        // Get the index of this AI message's wrapper in the DOM
         const aiIndex = allWrappers.indexOf(wrapper);
-
-        let userWrapper = allWrappers[aiIndex - 1];
+        
+        // Find the corresponding user message right before this AI message
+        const userWrapper = allWrappers[aiIndex - 1];
         if (!userWrapper || !userWrapper.classList.contains('user')) {
             showNotification("No preceding user message found to regenerate.", "error");
             return;
         }
-
-        const prompt = userWrapper.querySelector('.chat-bubble').textContent;
-        const currentHistory = chatSessions[currentSessionId];
-        const promptIndex = currentHistory.findIndex(msg => msg.role === 'user' && msg.content === prompt);
-        if (promptIndex === -1) {
-            showNotification("Prompt not found in chat history.", "error");
+        
+        // Get the user message content
+        const userBubble = userWrapper.querySelector('.chat-bubble');
+        const prompt = userBubble.textContent;
+        
+        // Get the bubble's dataset index to find the message in chat history
+        const bubbleIndex = parseInt(userBubble.dataset.index, 10);
+        if (isNaN(bubbleIndex)) {
+            showNotification("Could not determine message index.", "error");
             return;
         }
-
-        const newHistory = currentHistory.slice(0, promptIndex + 1);
+        
+        // Create truncated history up to and including this user message
+        const currentHistory = chatSessions[currentSessionId];
+        const newHistory = currentHistory.slice(0, bubbleIndex + 1);
+        
+        // Update chat history in storage
         chatSessions[currentSessionId] = newHistory;
         setChatSessions(chatSessions);
-
-        for (let i = allWrappers.length - 1; i > promptIndex; i--) {
+        
+        // Remove all messages after this user message in the DOM
+        for (let i = allWrappers.length - 1; i > aiIndex - 1; i--) {
             chatBox.removeChild(allWrappers[i]);
         }
-
+        
+        // Start generating new response
         isRequestPending = true;
         sendButton.textContent = "■";
         sendButton.classList.add("active");
-
+        
+        // Add thinking bubble
         const thinkingBubble = document.createElement("div");
         thinkingBubble.className = "chat-bubble ai placeholder";
         thinkingBubble.textContent = cookingMessages[Math.floor(Math.random() * cookingMessages.length)];
@@ -2530,8 +2753,9 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         thinkingWrapper.appendChild(thinkingBubble);
         chatBox.appendChild(thinkingWrapper);
         chatBox.scrollTop = chatBox.scrollHeight;
-
+        
         abortController = new AbortController();
+        
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
@@ -2540,35 +2764,37 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
                 body: JSON.stringify({ 
                     message: prompt, 
                     apiKey: currentApiKey,
-                    chatHistory: newHistory,
-                    isRetry: true
+                    chatHistory: newHistory.slice(0, -1), // Don't include the last message (user prompt) in history
+                    isRetry: true,
+                    model: modelSelect.value
                 })
             });
-
+            
+            // Process response and update UI
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.details || `HTTP error! status: ${response.status}`);
             }
-
+            
             const data = await response.json();
             thinkingWrapper.remove();
-
-            const newAiBubble = document.createElement("div");
-            newAiBubble.className = "chat-bubble ai";
-            newAiBubble.textContent = data.response;
             
-            const newAiWrapper = createAiMessageWrapper(data.response);
-            chatBox.appendChild(newAiWrapper);
-
+            // Create new AI response bubble
+            const aiWrapper = createAiMessageWrapper(data.response);
+            chatBox.appendChild(aiWrapper);
+            
+            // Update chat history with new AI response
             newHistory.push({ role: 'assistant', content: data.response });
             chatSessions[currentSessionId] = newHistory;
             setChatSessions(chatSessions);
-
+            
             updateChatList();
             chatBox.scrollTop = chatBox.scrollHeight;
             
             showNotification("Response regenerated!");
+            
         } catch (error) {
+            // Error handling remains the same
             if (error.name !== 'AbortError') {
                 thinkingWrapper.remove();
                 const errorBubble = document.createElement("div");
@@ -2577,28 +2803,29 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
                 const errorWrapper = document.createElement("div");
                 errorWrapper.className = "chat-bubble-wrapper ai";
                 errorWrapper.appendChild(errorBubble);
-
+                
+                // Add buttons to error message
                 const quoteButton = document.createElement("button");
                 quoteButton.className = "quote-button";
                 quoteButton.textContent = "💬";
                 quoteButton.title = "Quote this response";
                 quoteButton.onclick = () => quoteMessage(errorBubble);
                 errorWrapper.appendChild(quoteButton);
-
+                
                 const retryButton = document.createElement("button");
                 retryButton.className = "retry-button";
                 retryButton.textContent = "🔄";
                 retryButton.title = "Regenerate response";
                 retryButton.onclick = () => retryMessage(errorBubble);
                 errorWrapper.appendChild(retryButton);
-
+                
                 const copyButton = document.createElement("button");
                 copyButton.className = "copy-button";
                 copyButton.textContent = "📋";
                 copyButton.title = "Copy to clipboard";
                 copyButton.onclick = () => copyToClipboard(errorBubble.textContent);
                 errorWrapper.appendChild(copyButton);
-
+                
                 chatBox.appendChild(errorWrapper);
                 chatBox.scrollTop = chatBox.scrollHeight;
                 
@@ -3023,6 +3250,34 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
 
     // Initialize mobile optimizations
     window.addEventListener('resize', setupMobileOptimizations);
+    
+    // Modify input row positioning
+    const styleUpdate = `
+        .input-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .model-select-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            width: 180px;
+        }
+        
+        #modelSelect {
+            width: 100%;
+            font-size: 14px;
+            padding: 6px 10px;
+        }
+    `;
+    
+    // Append positioning styles
+    const positionStyleElement = document.createElement('style');
+    positionStyleElement.textContent = styleUpdate;
+    document.head.appendChild(positionStyleElement);
     </script>
 </body>
 </html>
