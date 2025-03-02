@@ -1266,15 +1266,30 @@
         padding: 1px 3px;
     }
     
-    .chat-bubble-wrapper.ai .button-group {
-        display: flex;
-        gap: 6px;
-        margin-left: 12px;
+    /* Improved emoji button spacing - Fix A */
+    .chat-bubble-wrapper.ai .quote-button,
+    .chat-bubble-wrapper.ai .retry-button,
+    .chat-bubble-wrapper.ai .copy-button {
+        margin-left: 12px; /* Increased from 8px */
     }
     
-    .chat-bubble-wrapper.ai .button-group button {
-        margin: 0;
+    /* Make emoji buttons closer together as a group - Fix C */
+    .chat-bubble-wrapper.ai {
+        display: flex;
+        align-items: center;
     }
+    
+    .chat-bubble-wrapper.ai .quote-button,
+    .chat-bubble-wrapper.ai .retry-button,
+    .chat-bubble-wrapper.ai .copy-button {
+        margin-left: 6px; /* Closer to each other */
+    }
+    
+    /* Create visual grouping for emoji buttons - Fix C */
+    .chat-bubble-wrapper.ai .chat-bubble {
+        margin-right: 6px; /* Add space after bubble */
+    }
+    
 </style>
 </head>
 <body>
@@ -1424,135 +1439,11 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         "Whipping up Insta-worthy lines..."
     ];
     
-    let currentAccessKey = '';
-    let currentApiKey = '';
-    let chatSessions = getChatSessions() || {};
-    let sessionNames = getSavedSessionNames() || {};
-    let currentSessionId = '';
-    
-    if (Object.keys(chatSessions).length === 0) {
-        currentSessionId = Date.now().toString();
-        chatSessions[currentSessionId] = [];
-        sessionNames[currentSessionId] = `Chat 1`;
-        setChatSessions(chatSessions);
-        setCookie('sessionNames', JSON.stringify(sessionNames), 7);
-    } else {
-        currentSessionId = Object.keys(chatSessions)[0];
-    }
-    
     let isRequestPending = false;
     let abortController = null;
     let currentStory = ''; // To store the story for display in user bubble
     let currentTranscript = ''; // To store the transcript for YT link submissions
 
-    function createAiMessageWrapper(message) {
-        const aiBubble = document.createElement("div");
-        aiBubble.className = "chat-bubble ai";
-        aiBubble.textContent = message;
-    
-        const buttonGroup = document.createElement("div");
-        buttonGroup.className = "button-group";
-    
-        const quoteButton = document.createElement("button");
-        quoteButton.className = "quote-button";
-        quoteButton.textContent = "💬";
-        quoteButton.title = "Quote this response";
-        quoteButton.onclick = () => quoteMessage(aiBubble);
-        buttonGroup.appendChild(quoteButton);
-    
-        const retryButton = document.createElement("button");
-        retryButton.className = "retry-button";
-        retryButton.textContent = "🔄";
-        retryButton.title = "Regenerate response";
-        retryButton.onclick = () => retryMessage(aiBubble);
-        buttonGroup.appendChild(retryButton);
-    
-        const copyButton = document.createElement("button");
-        copyButton.className = "copy-button";
-        copyButton.textContent = "📋";
-        copyButton.title = "Copy to clipboard";
-        copyButton.onclick = () => copyToClipboard(message);
-        buttonGroup.appendChild(copyButton);
-    
-        const aiWrapper = document.createElement("div");
-        aiWrapper.className = "chat-bubble-wrapper ai";
-        aiWrapper.appendChild(aiBubble);
-        aiWrapper.appendChild(buttonGroup);
-    
-        return aiWrapper;
-    }
-    
-    function verifyAccessKey() {
-        const accessKey = document.getElementById('accessKey').value.trim();
-        const messageElement = document.getElementById('accessKeyMessage');
-        
-        if (!accessKey) {
-            messageElement.style.color = "#f44336";
-            messageElement.textContent = "Please enter an access code.";
-            messageElement.style.opacity = "1";
-            return;
-        }
-    
-        showLoading();
-        fetch('/api/validate-code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: accessKey })
-        })
-        .then(response => {
-            hideLoading();
-            if (!response.ok) throw new Error('Invalid code');
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                currentAccessKey = accessKey;
-                setCookie('accessKey', accessKey, 7);
-                messageElement.style.color = "#4CAF50";
-                messageElement.textContent = "Access verified successfully!";
-                messageElement.style.opacity = "1";
-                setTimeout(() => {
-                    document.getElementById('accessKeyLogin').style.display = 'none';
-                    document.getElementById('apiKeyLogin').style.display = 'flex';
-                    messageElement.style.opacity = '0';
-                }, 1000);
-            }
-        })
-        .catch(error => {
-            messageElement.style.color = "#f44336";
-            messageElement.textContent = "Invalid access code.";
-            messageElement.style.opacity = "1";
-            hideLoading();
-        });
-    }
-    
-    function verifyApiKey() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const messageElement = document.getElementById('apiKeyMessage');
-        
-        if (!apiKey) {
-            messageElement.style.color = "#f44336";
-            messageElement.textContent = "Please enter an API key.";
-            messageElement.style.opacity = "1";
-            return;
-        }
-    
-        currentApiKey = apiKey;
-        setCookie('apiKey', apiKey, 7);
-        messageElement.style.color = "#4CAF50";
-        messageElement.textContent = "API key verified successfully!";
-        messageElement.style.opacity = "1";
-        
-        setTimeout(() => {
-            document.getElementById('apiKeyLogin').style.display = 'none';
-            document.getElementById('chatInterface').style.display = 'flex';
-            document.getElementById('settingsButton').style.display = 'block';
-            messageElement.style.opacity = '0';
-            updateChatList();
-            loadChatHistory();
-        }, 1000);
-    }
-    
     function setCookie(name, value, days) {
         let expires = "";
         if (days) {
@@ -1745,9 +1636,95 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
         showNotification('Story submitted successfully!');
     }
 
+    let currentAccessKey = '';
+    let currentApiKey = '';
+    let chatSessions = getChatSessions() || {};
+    let sessionNames = getSavedSessionNames() || {};
+    let currentSessionId = '';
+    
+    if (Object.keys(chatSessions).length === 0) {
+        currentSessionId = Date.now().toString();
+        chatSessions[currentSessionId] = [];
+        sessionNames[currentSessionId] = `Chat 1`;
+        setChatSessions(chatSessions);
+        setCookie('sessionNames', JSON.stringify(sessionNames), 7);
+    } else {
+        currentSessionId = Object.keys(chatSessions)[0];
+    }
+
     function getSavedSessionNames() {
         const names = getCookie('sessionNames');
         return names ? JSON.parse(names) : {};
+    }
+
+    function verifyAccessKey() {
+        const accessKey = document.getElementById('accessKey').value.trim();
+        const messageElement = document.getElementById('accessKeyMessage');
+        
+        if (!accessKey) {
+            messageElement.style.color = "#f44336";
+            messageElement.textContent = "Please enter an access code.";
+            messageElement.style.opacity = "1";
+            return;
+        }
+
+        showLoading();
+        fetch('/api/validate-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: accessKey })
+        })
+        .then(response => {
+            hideLoading();
+            if (!response.ok) throw new Error('Invalid code');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                currentAccessKey = accessKey;
+                setCookie('accessKey', accessKey, 7);
+                messageElement.style.color = "#4CAF50";
+                messageElement.textContent = "Access verified successfully!";
+                messageElement.style.opacity = "1";
+                setTimeout(() => {
+                    document.getElementById('accessKeyLogin').style.display = 'none';
+                    document.getElementById('apiKeyLogin').style.display = 'flex';
+                    messageElement.style.opacity = '0';
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            messageElement.style.color = "#f44336";
+            messageElement.textContent = "Invalid or used access code.";
+            messageElement.style.opacity = "1";
+        });
+    }
+
+    function verifyApiKey() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const messageElement = document.getElementById('apiKeyMessage');
+        
+        if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+            messageElement.style.color = "#f44336";
+            messageElement.textContent = "Invalid API key format.";
+            messageElement.style.opacity = "1";
+            return;
+        }
+
+        currentApiKey = apiKey;
+        setCookie('apiKey', apiKey, 7);
+        messageElement.style.color = "#4CAF50";
+        messageElement.textContent = "API key verified successfully!";
+        messageElement.style.opacity = "1";
+
+        setTimeout(() => {
+            document.getElementById('apiKeyLogin').style.display = 'none';
+            document.getElementById('chatInterface').style.display = 'flex';
+            document.getElementById('settingsButton').style.display = 'block';
+            loadChatHistory();
+            updateChatList();
+            showNotification('Welcome to Reddit Script Writer!');
+        }, 1000);
     }
 
     function autoExpand(field) {
@@ -1917,8 +1894,31 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
             const aiBubble = document.createElement("div");
             aiBubble.className = "chat-bubble ai";
             aiBubble.textContent = data.response;
+            const aiWrapper = document.createElement("div");
+            aiWrapper.className = "chat-bubble-wrapper ai";
+            aiWrapper.appendChild(aiBubble);
 
-            const aiWrapper = createAiMessageWrapper(data.response);
+            const quoteButton = document.createElement("button");
+            quoteButton.className = "quote-button";
+            quoteButton.textContent = "💬";
+            quoteButton.title = "Quote this response";
+            quoteButton.onclick = () => quoteMessage(aiBubble);
+            aiWrapper.appendChild(quoteButton);
+
+            const retryButton = document.createElement("button");
+            retryButton.className = "retry-button";
+            retryButton.textContent = "🔄";
+            retryButton.title = "Regenerate response";
+            retryButton.onclick = () => retryMessage(aiBubble);
+            aiWrapper.appendChild(retryButton);
+
+            const copyButton = document.createElement("button");
+            copyButton.className = "copy-button";
+            copyButton.textContent = "📋";
+            copyButton.title = "Copy to clipboard";
+            copyButton.onclick = () => copyToClipboard(data.response);
+            aiWrapper.appendChild(copyButton);
+
             chatBox.appendChild(aiWrapper);
 
             newHistory.push({ role: 'assistant', content: data.response });
@@ -2425,8 +2425,31 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
             const aiBubble = document.createElement("div");
             aiBubble.className = "chat-bubble ai";
             aiBubble.textContent = data.response;
-            
-            const aiWrapper = createAiMessageWrapper(data.response);
+            const aiWrapper = document.createElement("div");
+            aiWrapper.className = "chat-bubble-wrapper ai";
+            aiWrapper.appendChild(aiBubble);
+
+            const quoteButton = document.createElement("button");
+            quoteButton.className = "quote-button";
+            quoteButton.textContent = "💬";
+            quoteButton.title = "Quote this response";
+            quoteButton.onclick = () => quoteMessage(aiBubble);
+            aiWrapper.appendChild(quoteButton);
+
+            const retryButton = document.createElement("button");
+            retryButton.className = "retry-button";
+            retryButton.textContent = "🔄";
+            retryButton.title = "Regenerate response";
+            retryButton.onclick = () => retryMessage(aiBubble);
+            aiWrapper.appendChild(retryButton);
+
+            const copyButton = document.createElement("button");
+            copyButton.className = "copy-button";
+            copyButton.textContent = "📋";
+            copyButton.title = "Copy to clipboard";
+            copyButton.onclick = () => copyToClipboard(data.response);
+            aiWrapper.appendChild(copyButton);
+
             chatBox.appendChild(aiWrapper);
 
             currentHistory.push({ role: 'assistant', content: data.response });
@@ -2556,8 +2579,31 @@ Write a completely original 60-second YouTube Shorts script inspired by this sto
             const newAiBubble = document.createElement("div");
             newAiBubble.className = "chat-bubble ai";
             newAiBubble.textContent = data.response;
-            
-            const newAiWrapper = createAiMessageWrapper(data.response);
+            const newAiWrapper = document.createElement("div");
+            newAiWrapper.className = "chat-bubble-wrapper ai";
+            newAiWrapper.appendChild(newAiBubble);
+
+            const quoteButton = document.createElement("button");
+            quoteButton.className = "quote-button";
+            quoteButton.textContent = "💬";
+            quoteButton.title = "Quote this response";
+            quoteButton.onclick = () => quoteMessage(newAiBubble);
+            newAiWrapper.appendChild(quoteButton);
+
+            const retryButton = document.createElement("button");
+            retryButton.className = "retry-button";
+            retryButton.textContent = "🔄";
+            retryButton.title = "Regenerate response";
+            retryButton.onclick = () => retryMessage(newAiBubble);
+            newAiWrapper.appendChild(retryButton);
+
+            const copyButton = document.createElement("button");
+            copyButton.className = "copy-button";
+            copyButton.textContent = "📋";
+            copyButton.title = "Copy to clipboard";
+            copyButton.onclick = () => copyToClipboard(data.response);
+            newAiWrapper.appendChild(copyButton);
+
             chatBox.appendChild(newAiWrapper);
 
             newHistory.push({ role: 'assistant', content: data.response });
