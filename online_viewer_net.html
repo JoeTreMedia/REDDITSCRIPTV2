@@ -2109,7 +2109,8 @@ Keep the new story about 1500 characters long, and ensure it flows naturally as 
                 body: JSON.stringify({ 
                     message: newText, 
                     apiKey: currentApiKey,
-                    chatHistory: newHistory
+                    chatHistory: newHistory,
+                    model: modelSelect.value
                 })
             });
 
