@@ -296,7 +296,7 @@ app.post('/api/chat', async (req, res) => {
         apiKey, 
         chatHistory, 
         isRetry, 
-        model = 'claude-3-5-sonnet-20241022'
+        model = 'claude-sonnet-4-5-20250929'
     } = req.body;
 
     if (!message) {
@@ -364,12 +364,24 @@ app.post('/api/chat', async (req, res) => {
             
             // Helper function to determine appropriate token limits
             function getMaxTokensForModel(model) {
-                if (model.includes('claude-3-7')) {
-                    return 32000; // Appropriate for Claude 3.7 models
-                } else if (model.includes('claude-3-5')) {
-                    return 8000; // Just under the 8192 limit for Claude 3.5 models
-                } else {
-                    // Default fallback
+                // Claude 4.5 Sonnet & Haiku - 64K max output
+                if (model.includes('sonnet-4-5') || model.includes('haiku-4-5')) {
+                    return 64000;
+                }
+                // Claude 4.1 Opus - 32K max output
+                else if (model.includes('opus-4-1')) {
+                    return 32000;
+                }
+                // Legacy Claude 3.5 models
+                else if (model.includes('claude-3-5')) {
+                    return 8000;
+                }
+                // Legacy Claude 3.7 models
+                else if (model.includes('claude-3-7')) {
+                    return 32000;
+                }
+                // Default fallback
+                else {
                     return 4000;
                 }
             }
