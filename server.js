@@ -5,9 +5,15 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs').promises;
 const Papa = require('papaparse');
-const { kv } = require('@vercel/kv');
+const { createClient } = require('@supabase/supabase-js');
 // Add YouTube transcript library
 const youtubeCaptionsScraper = require('youtube-captions-scraper');
+
+// Set up Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
 
 const app = express();
 
@@ -161,7 +167,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'online_viewer_net.html'));
 });
 
-// Restored original Vercel KV access code validation
+// Supabase access code validation
 app.post('/api/validate-code', async (req, res) => {
     const { code } = req.body;
 
@@ -170,13 +176,24 @@ app.post('/api/validate-code', async (req, res) => {
     }
 
     try {
-        const isCodeValid = await kv.get(`code:${code}`);
+        // Check if code exists and is not expired
+        const { data, error } = await supabase
+            .from('access_codes')
+            .select('*')
+            .eq('code', code)
+            .gt('expires_at', new Date().toISOString())
+            .eq('used', false)
+            .single();
 
-        if (isCodeValid === null) {
+        if (error || !data) {
             return res.status(401).json({ error: 'Invalid or expired access code' });
         }
 
-        await kv.del(`code:${code}`);
+        // Mark code as used
+        await supabase
+            .from('access_codes')
+            .update({ used: true })
+            .eq('code', code);
 
         return res.status(200).json({ success: true });
     } catch (error) {
@@ -250,17 +267,16 @@ app.post('/api/save-script', async (req, res) => {
             content = scriptMatch[1].trim();
         }
 
-        let savedScripts = await kv.get('saved_scripts');
-        if (!savedScripts || !Array.isArray(savedScripts)) {
-            savedScripts = [];
+        const { error } = await supabase
+            .from('saved_scripts')
+            .insert([{
+                content: content,
+                created_at: timestamp || new Date().toISOString()
+            }]);
+
+        if (error) {
+            throw error;
         }
-        
-        savedScripts.push({
-            content: content,
-            timestamp: timestamp || new Date().toISOString()
-        });
-        
-        await kv.set('saved_scripts', savedScripts);
         
         return res.status(200).json({
             success: true,
@@ -411,8 +427,22 @@ app.post('/api/chat', async (req, res) => {
 // Endpoint to get saved scripts
 app.get('/api/saved-scripts', async (req, res) => {
     try {
-        const savedScripts = await kv.get('saved_scripts') || [];
-        return res.status(200).json({ scripts: savedScripts });
+        const { data, error } = await supabase
+            .from('saved_scripts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        // Transform to match old format
+        const scripts = data.map(script => ({
+            content: script.content,
+            timestamp: script.created_at
+        }));
+
+        return res.status(200).json({ scripts: scripts });
     } catch (error) {
         console.error('Error fetching saved scripts:', error.message);
         return res.status(500).json({ error: 'Failed to fetch saved scripts' });
@@ -422,13 +452,14 @@ app.get('/api/saved-scripts', async (req, res) => {
 // Endpoint to clear saved scripts
 app.post('/api/clear-saved-scripts', async (req, res) => {
     try {
-        // Initialize with empty array instead of setting null
-        const result = await kv.set('saved_scripts', []);
-        console.log('Clear saved scripts result:', result);
+        const { error } = await supabase
+            .from('saved_scripts')
+            .delete()
+            .not('id', 'is', null); // Delete all records
         
-        // Verify the scripts were cleared
-        const verifyEmpty = await kv.get('saved_scripts');
-        console.log('Verification after clearing:', verifyEmpty);
+        if (error) {
+            throw error;
+        }
         
         return res.status(200).json({ 
             success: true,
@@ -449,19 +480,14 @@ app.post('/api/delete-saved-script', async (req, res) => {
     }
     
     try {
-        let savedScripts = await kv.get('saved_scripts');
-        if (!savedScripts || !Array.isArray(savedScripts)) {
-            return res.status(404).json({ error: 'No saved scripts found' });
+        const { data, error } = await supabase
+            .from('saved_scripts')
+            .delete()
+            .eq('created_at', timestamp);
+        
+        if (error) {
+            throw error;
         }
-        
-        const initialLength = savedScripts.length;
-        savedScripts = savedScripts.filter(script => script.timestamp !== timestamp);
-        
-        if (savedScripts.length === initialLength) {
-            return res.status(404).json({ error: 'Script with specified timestamp not found' });
-        }
-        
-        await kv.set('saved_scripts', savedScripts);
         
         return res.status(200).json({ 
             success: true,

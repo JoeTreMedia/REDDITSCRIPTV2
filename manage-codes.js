@@ -1,13 +1,13 @@
 require('dotenv').config();
-const { Redis } = require('@upstash/redis');
+const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const readline = require('readline');
 
-// Set up Upstash client with REST API URL and token from .env
-const redis = new Redis({
-    url: process.env.KV_REST_API_URL,
-    token: process.env.KV_REST_API_TOKEN,
-});
+// Set up Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -23,17 +23,34 @@ function generateCode() {
 // Add a new code
 async function addCode() {
     const code = generateCode();
-    await redis.set(`code:${code}`, 'valid', { ex: 86400 }); // Expires in 24 hours
-    console.log(`Added new code: ${code}`);
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // Expires in 24 hours
+
+    const { data, error } = await supabase
+        .from('access_codes')
+        .insert([{
+            code: code,
+            expires_at: expiresAt.toISOString()
+        }]);
+
+    if (error) {
+        console.error(`Error adding code: ${error.message}`);
+    } else {
+        console.log(`Added new code: ${code}`);
+    }
 }
 
 // Remove a code
 async function removeCode(code) {
-    const result = await redis.del(`code:${code}`);
-    if (result === 1) {
-        console.log(`Removed code: ${code}`);
+    const { data, error } = await supabase
+        .from('access_codes')
+        .delete()
+        .eq('code', code);
+
+    if (error) {
+        console.error(`Error removing code: ${error.message}`);
     } else {
-        console.log(`Code not found: ${code}`);
+        console.log(`Removed code: ${code}`);
     }
 }
 
